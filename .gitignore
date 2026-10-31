@@ -53,3 +53,8 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Executables de tests
+test_ex1
+test_ex2
+test_ex3
