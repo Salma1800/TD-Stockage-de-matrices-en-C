@@ -58,3 +58,5 @@ dkms.conf
 test_ex1
 test_ex2
 test_ex3
+test_ex2_sortie.txt
+valgrind_*.txt
