@@ -165,3 +165,124 @@ valgrind --leak-check=full ./test_ex1
 ==2498== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 ```
 ![valgrind test_ex1](captures_valgrind/test_ex1.png)
+
+
+
+### 4.2. Exercice 2 — Entrées-sorties
+#### 4.2.2. Objectif de l'exercice
+L'objectif de cet exercice est de compléter les fonctions permettant d'afficher une matrice, de l'écrire dans un fichier texte au format canonique, puis de la relire en détectant toute donnée invalide
+#### 4.2.2. Code ajouté
+**Étape 2.a — Affichage des coefficients**
+
+```c
+for (int i = 0; i < m->nb_lignes; i++) {
+    for (int j = 0; j < m->nb_colonnes; j++)
+        printf(" %8d", m->coef[i][j]);
+    putchar('\n');
+}
+```
+
+**Étape 2.b — Écriture des coefficients dans le fichier**
+
+```c
+for (int i = 0; i < m->nb_lignes; i++) {
+    for (int j = 0; j < m->nb_colonnes; j++) {
+        if (fprintf(f, j == 0 ? "%d" : " %d", m->coef[i][j]) < 0)
+            return MAT_ERR_ECRITURE;
+    }
+    if (fputc('\n', f) == EOF)
+        return MAT_ERR_ECRITURE;
+}
+```
+
+**Étape 2.c — Vérification des dimensions lues**
+
+```c
+if (nb_lignes < 1 || nb_lignes > MAT_DIM_MAX)
+    return MAT_ERR_FORMAT;
+if (nb_colonnes < 1 || nb_colonnes > MAT_DIM_MAX)
+    return MAT_ERR_FORMAT;
+```
+
+**Étape 2.d — Allocation d'une matrice locale**
+
+```c
+Matrice tmp;
+err = mat_allouer(&tmp, nb_lignes, nb_colonnes);
+if (err != MAT_OK)
+    return err;
+```
+
+**Étape 2.e — Lecture des coefficients**
+
+```c
+for (int i = 0; i < nb_lignes; i++) {
+    for (int j = 0; j < nb_colonnes; j++) {
+        err = lire_entier(f, &tmp.coef[i][j]);
+        if (err != MAT_OK) {
+            mat_detruire(&tmp);
+            return err;
+        }
+    }
+}
+```
+
+**Étape 2.f — Transfert du résultat**
+
+```c
+*res = tmp;
+return MAT_OK;
+```
+
+#### 4.2.3. Questions de réflexion
+- **Q4.1 — Pourquoi `mat_lire` remplit-elle d'abord une matrice locale avant de l'affecter à `*res` ?**
+ Une erreur peut survenir au milieu de la lecture (coefficient manquant, donnée non numérique, fichier tronqué). Si on remplissait `*res` directement, l'appelant recevrait une matrice à moitié remplie, ce qui est contraire à la règle R3. En remplissant d'abord la matrice locale `tmp`, on peut en cas d'erreur la détruire avec `mat_detruire(&tmp)` : `*res` reste alors égal à `MATRICE_VIDE`, puisqu'il a été mis à vide au début de la fonction. Le transfert `*res = tmp;` n'a lieu qu'à la toute fin, quand tout a réussi. Les tests « coefficient manquant » et « donnée non numérique » renvoient bien `MAT_ERR_FORMAT`, et valgrind ne signale aucune fuite.
+
+- **Q4.2 — La lecture vérifie-t-elle que chaque ligne de la matrice est sur sa propre ligne de texte ? Est-ce gênant ? Justifiez le principe « tolérant en lecture, strict en écriture ».**
+ Non. `fscanf` ignore les espaces et les sauts de ligne : le fichier est lu comme une simple suite de nombres. Par exemple, une matrice 2 × 3 écrite entièrement sur une seule ligne est acceptée. Ce n'est pas gênant, car les dimensions lues au début indiquent exactement combien de nombres il faut lire.
+
+  Ce principe se justifie ainsi :
+  - **Tolérant en lecture** : un fichier peut être écrit ou modifié à la main, avec des espaces, des tabulations ou des lignes vides en trop. Les refuser n'apporterait rien, car la mise en page ne change pas la matrice. On reste en revanche strict sur ce qui compte : dimensions valides, nombre exact de coefficients, entiers représentables par un `int`.
+  - **Strict en écriture** : le programme produit toujours exactement le même format. Les fichiers sont donc prévisibles, faciles à comparer (le test `(2.b)` vérifie le contenu exact) et lisibles par n'importe quel autre programme.
+
+- **Q4.3 — Après l'appel `mat_lire(f, &m)`, le flux `f` est positionné après le dernier coefficient. Comment exploiter cette propriété pour stocker deux matrices dans un même fichier ?**
+ Il suffit d'écrire les deux matrices l'une après l'autre dans le même fichier, en appelant deux fois `mat_ecrire` sur le même flux. Pour les relire, on ouvre le fichier une seule fois avec `fopen`, on appelle `mat_lire(f, &a)` puis `mat_lire(f, &b)`, et on ferme avec `fclose`. Le second appel reprend exactement là où le premier s'est arrêté, c'est-à-dire sur les dimensions de la deuxième matrice. Cela fonctionne parce que `mat_lire` et `mat_ecrire` ne ferment jamais le flux.
+
+ - **Q4.4 — Pourquoi `mat_ecrire` appelle-t-elle `fflush` avant de renvoyer `MAT_OK` ? Cela dispense-t-il l'appelant de tester `fclose` ?**
+ `fprintf` n'écrit pas directement sur le disque : les données passent par un tampon en mémoire, et une erreur (disque plein, par exemple) peut n'apparaître qu'au moment où ce tampon est vidé. `fflush` force cette écriture tout de suite, ce qui permet à `mat_ecrire` de détecter l'erreur et de renvoyer `MAT_ERR_ECRITURE` au lieu d'un faux `MAT_OK`.
+
+  Cela ne dispense pas l'appelant de tester `fclose`. La fermeture peut elle aussi échouer, par exemple si d'autres données ont été écrites après l'appel à `mat_ecrire`, ou si le système ne parvient à terminer l'écriture qu'au moment de la fermeture. C'est pour cela que la fonction `sauvegarder` de `main.c` teste le résultat de `fclose`.
+
+  #### 4.2.3. Tests et validation
+
+Les tests de l'exercice 2 ont été exécutés sous Linux (WSL) afin de vérifier le bon fonctionnement des fonctions complétées.
+
+**Résultat obtenu :**
+
+```text
+Bilan : 14 / 14
+```
+
+#### 4.2.4. Vérification de la mémoire avec Valgrind
+
+La commande utilisée :
+
+```bash
+valgrind --leak-check=full ./test_ex2
+```
+
+**Résultat obtenu :**
+
+### test_ex2
+
+```text
+==4054== HEAP SUMMARY:
+==4054==     in use at exit: 0 bytes in 0 blocks
+==4054==   total heap usage: 51 allocs, 51 frees, 60,728 bytes allocated
+==4054==
+==4054== All heap blocks were freed -- no leaks are possible
+==4054==
+==4054== For lists of detected and suppressed errors, rerun with: -s
+==4054== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+![valgrind test_ex2](captures_valgrind/test_ex2.png)
