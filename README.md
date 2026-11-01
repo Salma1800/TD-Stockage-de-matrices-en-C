@@ -151,27 +151,13 @@ valgrind --leak-check=full ./test_ex1
 ```
 
 **Résultat obtenu :**
-
-### test_ex1
-
-```text
-==2498== HEAP SUMMARY:
-==2498==     in use at exit: 0 bytes in 0 blocks
-==2498==   total heap usage: 11 allocs, 11 frees, 1,228 bytes allocated
-==2498==
-==2498== All heap blocks were freed -- no leaks are possible
-==2498==
-==2498== For lists of detected and suppressed errors, rerun with: -s
-==2498== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
-```
-![valgrind test_ex1](captures_valgrind/test_ex1.png)
-
-
+(voir 5. Vérification mémoire)
 
 ### 4.2. Exercice 2 — Entrées-sorties
-#### 4.2.2. Objectif de l'exercice
+#### Objectif de l'exercice
 L'objectif de cet exercice est de compléter les fonctions permettant d'afficher une matrice, de l'écrire dans un fichier texte au format canonique, puis de la relire en détectant toute donnée invalide
-#### 4.2.2. Code ajouté
+#### 4.2.1. Code ajouté — Fichier `matrice_io.c`
+
 **Étape 2.a — Affichage des coefficients**
 
 ```c
@@ -272,6 +258,93 @@ valgrind --leak-check=full ./test_ex2
 ```
 
 **Résultat obtenu :**
+(voir 5. Vérification mémoire)
+
+### 4.4. Exercice 4 — Démonstration complète
+
+#### Objectif de l'exercice
+
+L'objectif de cet exercice est d'assembler les quatre modules dans un programme de démonstration qui lit deux matrices depuis des fichiers, calcule leur somme ou leur produit, affiche et enregistre le résultat, et traite proprement chaque erreur en libérant toute la mémoire.
+
+#### 4.4.1. Code ajouté — Fichier `main.c`
+
+**Étape 4.a — Affichage des matrices A et B**
+
+```c
+mat_afficher("A", &a);
+mat_afficher("B", &b);
+```
+
+**Étape 4.b — Calcul du résultat**
+
+```c
+MatErreur err = addition ? mat_additionner(&a, &b, &r)
+                         : mat_multiplier(&a, &b, &r);
+if (err != MAT_OK) {
+    fprintf(stderr, "Erreur : calcul impossible : %s ",
+            mat_message_erreur(err));
+    fprintf(stderr, "(A : %d x %d, B : %d x %d)\n",
+            a.nb_lignes, a.nb_colonnes, b.nb_lignes, b.nb_colonnes);
+    goto nettoyage;
+}
+```
+
+**Étape 4.c — Affichage du résultat**
+
+```c
+mat_afficher(addition ? "R = A + B" : "R = A x B", &r);
+```
+
+**Étape 4.d — Signalement du succès**
+
+```c
+printf("Résultat enregistré dans \"%s\".\n", argv[4]);
+statut = EXIT_SUCCESS;
+```
+
+#### 4.4.3. Questions de réflexion: 
+- **Q6.1 — Pourquoi le message d'erreur est-il affiché par `main.c` (ou ses fonctions `static`) et non par `mat_lire` ? Pensez à un programme graphique qui réutiliserait la bibliothèque.**
+  La bibliothèque est faite pour être réutilisée par différents programmes, qui n'affichent pas tous leurs erreurs de la même manière. `mat_lire` se contente donc de renvoyer un code d'erreur, et c'est le programme appelant qui décide quoi en faire. Un programme graphique, par exemple, n'a pas de terminal : un message écrit sur `stderr` par `mat_lire` ne serait jamais vu par l'utilisateur, alors que le programme voudrait plutôt afficher une fenêtre d'erreur. De plus, `mat_lire` reçoit un flux déjà ouvert et ne connaît pas le nom du fichier. C'est `charger`, dans `main.c`, qui connaît le chemin et peut afficher un message précis grâce à `mat_message_erreur`.
+
+- **Q6.2 — Pourquoi le résultat de `fclose` est-il testé dans `sauvegarder` mais pas dans `charger` ?**
+
+  En écriture, les données passent par un tampon en mémoire et ne sont réellement écrites sur le disque qu'au moment où ce tampon est vidé, au plus tard lors du `fclose`. Si `fclose` échoue (disque plein, par exemple), le fichier peut être incomplet : il faut le signaler à l'utilisateur, sinon il croirait que l'enregistrement a réussi. En lecture, au contraire, quand on arrive au `fclose`, la matrice a déjà été entièrement lue et se trouve en mémoire. Un échec de la fermeture ne change rien au résultat : il n'y a aucune donnée à perdre, donc rien à signaler.
+
+- **Q6.3 — Dans le scénario 8, le calcul a réussi mais l'enregistrement a échoué. Combien de matrices faut-il libérer ? Vérifiez que votre programme le fait.**
+
+  Il faut libérer les trois matrices : A et B, qui ont été lues, et R, qui a été calculée. Toutes les trois possèdent de la mémoire au moment où l'enregistrement échoue. Dans notre programme, l'échec de `sauvegarder` provoque un `goto nettoyage`, et le nettoyage appelle `mat_detruire` sur `r`, `b` et `a`. Il n'y a rien à gérer au cas par cas : comme `mat_detruire` ne fait rien sur une matrice vide, le même nettoyage convient à tous les chemins d'erreur.
+
+ #### 4.4.4. Tests et validation
+
+Les tests de l'exercice 4 ont été exécutés sous Linux (WSL) afin de vérifier le bon fonctionnement des fonctions complétées.
+**Résultat obtenu :**
+
+
+#### 4.4.5. Vérification de la mémoire avec Valgrind
+
+La commande utilisée :
+
+```bash
+valgrind --leak-check=full ./test_ex1
+```
+
+**Résultat obtenu :**
+(voir 5. Vérification mémoire)
+
+ ## 5. Vérification mémoire
+ ### test_ex1
+
+```text
+==2498== HEAP SUMMARY:
+==2498==     in use at exit: 0 bytes in 0 blocks
+==2498==   total heap usage: 11 allocs, 11 frees, 1,228 bytes allocated
+==2498==
+==2498== All heap blocks were freed -- no leaks are possible
+==2498==
+==2498== For lists of detected and suppressed errors, rerun with: -s
+==2498== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+![valgrind test_ex1](captures_valgrind/test_ex1.png)
 
 ### test_ex2
 
@@ -286,3 +359,11 @@ valgrind --leak-check=full ./test_ex2
 ==4054== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 ```
 ![valgrind test_ex2](captures_valgrind/test_ex2.png)
+
+
+
+ ## 6. Démonstration finale
+
+
+
+ ## 7. Bilan et difficultés
