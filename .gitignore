@@ -62,3 +62,4 @@ test_ex2_sortie.txt
 valgrind_*.txt
 demo_matrices
 R*.txt
+.vscode/
