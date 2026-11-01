@@ -1,20 +1,23 @@
-# TD-Stockage-de-matrices-en-C
+# TD — Stockage de matrices en C
 
-INSA Centre-Val de Loire
-Spécialité : Sciences et Technologies Informatiques
-Module : Programmation en langage C
+**Établissement :** INSA Centre-Val de Loire  
+**Formation :** 3A Sciences et Technologies Informatiques (STI)  
+**Matière :** Programmation en langage C  
+**Travail réalisé par :** Maissane et Salma  
+**Année universitaire :** 2026-2027
+
+**Dépôt GitHub :** TD-Stockage-de-matrices-en-C
 
 
-## 1. Présentation du travail
+## 1. Introduction
+Ce travail pratique porte sur le stockage et la manipulation de matrices en langage C. Il a pour objectif de mettre en application plusieurs notions importantes de programmation, notamment les structures, les pointeurs, l'allocation dynamique de mémoire et la gestion des erreurs.
 
-Ce travail pratique porte sur la gestion et la manipulation des matrices en langage C.
+Le travail consiste à compléter plusieurs fichiers sources afin de permettre la création, la destruction, la lecture, l'écriture et le calcul sur des matrices. Une attention particulière est portée à la gestion de la mémoire, à la prévention des fuites mémoire et à la vérification des erreurs pouvant survenir pendant l'exécution du programme.
 
-L'objectif principal est de développer plusieurs fonctions permettant de créer, stocker, lire et manipuler des matrices en utilisant l'allocation dynamique de la mémoire.
+Nous avons réalisé ce travail en binôme, en utilisant GitHub pour partager les fichiers et suivre les différentes modifications. Nous avons commencé à travailler ensemble afin de nous familiariser avec le sujet, de comprendre l'organisation du projet et de prendre en main les outils utilisés. Par la suite, nous avons réparti les exercices et poursuivi le travail à distance, tout en échangeant régulièrement sur l'avancement du projet.
 
-Le travail est réalisé en binôme. Le développement est suivi à l'aide de Git et GitHub afin de faciliter la collaboration et de conserver l'historique des modifications.
 
-## 2. Objectifs du TD
-
+## 2. Objectifs du TD et environnement de développement
 Ce travail pratique vise à mettre en application les notions de programmation en langage C, notamment la gestion de la mémoire et la manipulation des structures de données.
 
 Les principaux objectifs sont les suivants :
@@ -27,8 +30,7 @@ Les principaux objectifs sont les suivants :
 - Vérifier le bon fonctionnement du programme à l'aide de tests.
 - Éviter les fuites mémoire grâce à une gestion rigoureuse des ressources.
 
-## 3. Environnement de développement
-
+**Environnement de développement**
 La réalisation de ce TD s'appuie sur plusieurs outils :
 
 - **Langage C :** développement des fonctions de gestion et de manipulation des matrices.
@@ -40,10 +42,209 @@ La réalisation de ce TD s'appuie sur plusieurs outils :
 
 Les tests sont exécutés progressivement afin de vérifier le bon fonctionnement des fonctions développées.
 
+
+## 3. Conception
+### 3.1. Organisation des modules et appels entre les fonctions
+Le projet est organisé en quatre modules complémentaires et un programme principal. Cette organisation repose sur une séparation des responsabilités : chaque module possède un rôle précis et regroupe les fonctions correspondant à une fonctionnalité du programme. Cela permet de rendre le code plus lisible, de faciliter les tests et de simplifier les modifications.
+
+Les quatre modules sont les suivants :
+
+- **Module `matrice` (`matrice.c` / `matrice.h`) :** il constitue la base du projet. Il définit la structure `Matrice`, les différents codes d'erreur, les messages associés et la fonction `mat_est_valide`, qui permet de vérifier la validité d'une matrice.
+- **Module `matrice_alloc` (`matrice_alloc.c` / `matrice_alloc.h`) :** il est responsable de la gestion de la mémoire dynamique. Il contient les fonctions `mat_allouer` et `mat_detruire`, qui permettent respectivement de créer une matrice et de libérer la mémoire qu'elle utilise.
+- **Module `matrice_io` (`matrice_io.c` / `matrice_io.h`) :** il regroupe les fonctions de lecture, d'écriture et d'affichage des matrices. Il contient notamment `mat_lire`, `mat_ecrire` et `mat_afficher`.
+- **Module `matrice_calcul` (`matrice_calcul.c` / `matrice_calcul.h`) :** il contient les opérations mathématiques effectuées sur les matrices. Il permet de réaliser leur addition avec `mat_additionner` et leur multiplication avec `mat_multiplier`, tout en vérifiant la compatibilité des dimensions et les dépassements de capacité.
+
+Le fichier `main.c` constitue le programme principal. Il utilise les quatre modules pour charger deux matrices depuis des fichiers, effectuer l'opération demandée, afficher le résultat et l'enregistrer dans un fichier de sortie.
+
+Les principales interactions entre les fonctions sont représentées ci-dessous :
+
+```text
+                         main.c
+                    Programme principal
+                            |
+          +-----------------+------------------+
+          |                 |                  |
+          v                 v                  v
+       charger()       mat_afficher()       Calcul
+          |                                  |
+          v                         +--------+--------+
+       mat_lire()                   |                 |
+                                    v                 v
+                             mat_additionner()  mat_multiplier()
+                                    |                 |
+                                    +--------+--------+
+                                             |
+                                             v
+                                      mat_allouer()
+                                      mat_detruire()
+
+       main.c
+          |
+          +----> sauvegarder()
+          |             |
+          |             v
+          |         mat_ecrire()
+          |
+          +----> mat_detruire()
+          |
+          +----> mat_message_erreur()
+```
+
+Les fonctions `charger` et `sauvegarder`, définies dans `main.c`, assurent respectivement le chargement des matrices et l'enregistrement du résultat. Elles s'occupent également de l'ouverture et de la fermeture des fichiers. Les fonctions de lecture et de calcul utilisent le module d'allocation lorsqu'elles ont besoin de créer ou de détruire une matrice. Le module `matrice` fournit les éléments communs nécessaires au fonctionnement des autres modules.
+
+### 3.2. Graphe des inclusions
+Les fichiers sources utilisent des fichiers d'en-tête (`.h`) pour accéder aux déclarations des structures, des types et des fonctions nécessaires à leur fonctionnement.
+
+Les fichiers d'en-tête permettent de séparer les interfaces des modules de leur implémentation. Les fichiers `.h` contiennent les déclarations accessibles aux autres modules, tandis que les fichiers `.c` contiennent le code des fonctions correspondantes.
+
+Le graphe des inclusions suivant présente les dépendances entre les fichiers du projet :
+
+```text
+main.c
+  |
+  +----> matrice.h
+  |
+  +----> matrice_alloc.h
+  |          |
+  |          +----> matrice.h
+  |
+  +----> matrice_io.h
+  |          |
+  |          +----> matrice.h
+  |
+  +----> matrice_calcul.h
+             |
+             +----> matrice.h
+
+
+matrice.c
+  |
+  +----> matrice.h
+
+
+matrice_alloc.c
+  |
+  +----> matrice_alloc.h
+             |
+             +----> matrice.h
+
+
+matrice_io.c
+  |
+  +----> matrice_io.h
+  |          |
+  |          +----> matrice.h
+  |
+  +----> matrice_alloc.h
+             |
+             +----> matrice.h
+
+
+matrice_calcul.c
+  |
+  +----> matrice_calcul.h
+  |          |
+  |          +----> matrice.h
+  |
+  +----> matrice_alloc.h
+             |
+             +----> matrice.h
+```
+
+Les fichiers sources incluent également des bibliothèques standard du langage C selon les fonctionnalités utilisées, comme `stdio.h`, `stdlib.h`, `stddef.h`, `limits.h`, `errno.h` et `string.h`.
+
+Les fichiers d'en-tête utilisent les directives `#ifndef`, `#define` et `#endif`, appelées gardes d'inclusion. Par exemple, dans `matrice_alloc.h`, la directive `#ifndef MATRICE_ALLOC_H` vérifie si le symbole correspondant a déjà été défini. Si ce n'est pas le cas, `#define MATRICE_ALLOC_H` le définit et autorise la lecture du contenu du fichier.
+
+Ces gardes sont nécessaires lorsqu'un fichier d'en-tête est inclus plusieurs fois, directement ou indirectement, par différents fichiers sources. Elles évitent que les mêmes déclarations soient traitées plusieurs fois et préviennent ainsi les erreurs de redéfinition des structures, des types et des fonctions.
+
+### 3.3. Règles de propriété et de gestion de la mémoire
+La gestion de la mémoire dynamique constitue un élément essentiel du projet. Une matrice est représentée par un tableau de pointeurs, chaque pointeur désignant une ligne contenant les coefficients de la matrice. Chaque ligne possède donc sa propre zone mémoire.
+
+La fonction `mat_allouer`, définie dans `matrice_alloc.c`, est responsable de la réservation de la mémoire. Elle commence par allouer le tableau principal de pointeurs, puis réserve séparément l'espace nécessaire pour chaque ligne. Lorsque toutes les allocations réussissent, elle enregistre les informations dans la structure de la matrice.
+
+La mémoire allouée appartient à la matrice créée. L'appelant doit donc utiliser `mat_detruire` lorsqu'il n'en a plus besoin. Cette fonction libère d'abord chaque ligne, puis le tableau principal de pointeurs. Elle remet ensuite la structure à l'état `MATRICE_VIDE`.
+
+Afin d'éviter les fuites mémoire, les doubles libérations et les accès à des pointeurs invalides, le projet respecte les sept règles de propriété définies dans le sujet du TD.
+
+**R1 — Initialisation des matrices**
+Toute variable de type `Matrice` doit être initialisée avec `MATRICE_VIDE` dès sa déclaration. Cette initialisation garantit que les pointeurs ne contiennent pas de valeurs indéterminées. Dans `main.c`, les trois matrices `a`, `b` et `r` sont initialisées de cette manière. Cette règle est également appliquée lors de la création des matrices résultat dans les fonctions d'allocation et de calcul.
+
+**R2 — Transfert de propriété après une réussite**
+Lorsqu'une fonction renvoie `MAT_OK` et remplit le paramètre de sortie `*res`, la propriété de la mémoire du résultat est transférée à l'appelant. Celui-ci devient responsable de sa libération en utilisant `mat_detruire`. Par exemple, après une allocation réussie avec `mat_allouer`, la matrice obtenue appartient à l'appelant. De même, les fonctions `mat_lire`, `mat_additionner` et `mat_multiplier` transfèrent la propriété de leur résultat lorsqu'elles réussissent.
+
+**R3 — État du résultat en cas d'échec**
+Lorsqu'une fonction échoue, le résultat doit rester égal à `MATRICE_VIDE` et toutes les allocations réalisées par cette fonction doivent être libérées. L'appelant n'a alors aucune mémoire supplémentaire à libérer pour ce résultat. Cette règle est notamment appliquée dans `mat_allouer`, qui libère les lignes déjà obtenues si une allocation échoue. Elle est également respectée dans `mat_lire` et les fonctions de calcul, qui détruisent leur matrice temporaire ou résultat avant de retourner une erreur.
+
+**R4 — Protection des matrices d'entrée**
+Une fonction ne doit jamais modifier ni libérer une matrice reçue en entrée avec le type `const Matrice *`. Cette règle protège les données fournies par l'appelant et évite les modifications involontaires. Elle est appliquée dans les fonctions `mat_ecrire`, `mat_afficher`, `mat_additionner` et `mat_multiplier`. Les fonctions de calcul utilisent les matrices d'entrée uniquement pour effectuer leurs opérations et construisent un résultat dans une nouvelle zone mémoire.
+
+**R5 — Responsabilité du paramètre de sortie**
+Le paramètre `res` est un paramètre de sortie : son ancien contenu est écrasé lors de l'appel. Si cette matrice possédait déjà de la mémoire, l'appelant doit obligatoirement la détruire avant de transmettre son adresse à la fonction. De plus, `res` doit être distinct des matrices d'entrée. Cette dernière condition est vérifiée dans `verifier_parametres`, qui refuse notamment les appels où `res` est égal à `a` ou à `b`. Cela évite d'effacer ou de remplacer une matrice utilisée comme entrée.
+
+**R6 — Destruction sécurisée d'une matrice**
+La fonction `mat_detruire` doit remettre la matrice à l'état `MATRICE_VIDE` après avoir libéré toute sa mémoire. Ainsi, un deuxième appel sur la même matrice est sans effet et ne provoque pas de double libération. Dans notre implémentation, les lignes sont libérées en premier, puis le tableau principal de pointeurs. Enfin, l'affectation `*m = MATRICE_VIDE` garantit que la structure ne conserve pas d'anciennes adresses.
+
+**R7 — Gestion des fichiers et des flux**
+Un fichier doit toujours être fermé par le code qui l'a ouvert. Les fonctions du module `matrice_io` reçoivent un flux déjà ouvert et ne doivent jamais le fermer elles-mêmes. Cette séparation permet de distinguer les opérations de lecture et d'écriture de la gestion des fichiers. Dans `main.c`, la fonction `charger` ouvre le fichier avec `fopen`, appelle `mat_lire`, puis ferme le fichier avec `fclose`. De la même manière, `sauvegarder` ouvre le fichier en écriture, appelle `mat_ecrire` et vérifie également le résultat de `fclose`.
+
+### 3.4. Justification des choix techniques
+Plusieurs choix techniques ont été retenus afin d'améliorer la fiabilité du programme et de limiter les erreurs liées à la gestion des ressources.
+
+Tout d'abord, certaines fonctions sont déclarées avec le mot-clé `static`. Par exemple, `verifier_parametres` et `tient_dans_int` dans `matrice_calcul.c`, ainsi que `lire_entier` dans `matrice_io.c`, sont des fonctions internes à leur fichier. Le mot-clé `static` limite leur visibilité au fichier dans lequel elles sont définies. Il évite ainsi d'exposer des fonctions qui ne sont pas destinées à être utilisées directement par les autres modules.
+
+Ensuite, la gestion des allocations partielles est indispensable. Lorsqu'une allocation de ligne échoue dans `mat_allouer`, les lignes précédemment allouées sont libérées avec `free`, puis le tableau principal est également libéré. La fonction renvoie alors `MAT_ERR_ALLOCATION`. Cette méthode garantit qu'aucune mémoire ne reste réservée inutilement.
+
+Enfin, les opérations arithmétiques doivent tenir compte des limites des types entiers. Dans le module de calcul, les additions et les produits intermédiaires sont effectués en `long long`. La fonction `tient_dans_int` vérifie ensuite que le résultat appartient à l'intervalle `[INT_MIN, INT_MAX]`. Pour la multiplication, une vérification supplémentaire permet de détecter un dépassement possible de `long long` lors de l'addition successive des produits. Si un dépassement est détecté, la matrice résultat est détruite et `MAT_ERR_DEPASSEMENT` est renvoyé.
+
+### 3.5. Compilation du projet
+
+La compilation du projet est organisée à l'aide d'un fichier `Makefile`, qui centralise les commandes nécessaires à la création des différents exécutables de test et du programme principal.
+
+Au début du fichier, deux variables sont définies :
+
+- `CC = gcc` indique le compilateur utilisé.
+- `CFLAGS` regroupe les options de compilation : `-std=c11` pour utiliser la norme C11, `-Wall`, `-Wextra` et `-Wpedantic` pour activer plusieurs avertissements, `-g` pour ajouter les informations de débogage et `-DMAT_TEST_ALLOC` pour activer le mécanisme de simulation des échecs d'allocation mémoire.
+
+Les variables `EX1`, `EX2`, `EX3` et `EX4` regroupent les fichiers sources nécessaires à chaque exercice. Cela permet de réutiliser les mêmes listes de fichiers dans les différentes règles de compilation.
+
+La règle `all` permet de compiler l'ensemble des exécutables : les trois programmes de test et le programme de démonstration `demo_matrices`. Chaque règle utilise ensuite le compilateur et les options définies précédemment pour produire l'exécutable correspondant.
+
+Enfin, la règle `clean` permet de supprimer les exécutables générés afin de repartir d'une compilation propre.
+
+**Contenu du Makefile :**
+
+```makefile
+CC = gcc
+CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -g -DMAT_TEST_ALLOC
+
+EX1 = test_ex1.c matrice.c matrice_alloc.c
+EX2 = test_ex2.c matrice.c matrice_alloc.c matrice_io.c
+EX3 = test_ex3.c matrice.c matrice_alloc.c matrice_calcul.c
+EX4 = main.c matrice.c matrice_alloc.c matrice_io.c matrice_calcul.c
+
+all: test_ex1 test_ex2 test_ex3 demo_matrices
+
+test_ex1: $(EX1)
+	$(CC) $(CFLAGS) $(EX1) -o test_ex1
+
+test_ex2: $(EX2)
+	$(CC) $(CFLAGS) $(EX2) -o test_ex2
+
+test_ex3: $(EX3)
+	$(CC) $(CFLAGS) $(EX3) -o test_ex3
+
+demo_matrices: $(EX4)
+	$(CC) $(CFLAGS) $(EX4) -o demo_matrices
+
+clean:
+	rm -f test_ex1 test_ex2 test_ex3 demo_matrices
+```
+
+Sous Windows, nous utilisons la commande `mingw32-make` pour exécuter les règles définies dans le Makefile. Cette organisation facilite la compilation des différents exercices et permet de conserver des commandes identiques entre les membres du binôme.
+
+
 ## 4. Réalisation, exercice par exercice
-
 ## 4.1. Exercice 1 — Allocation et destruction des matrices
-
 ### Objectif de l'exercice
   L'objectif de cet exercice est de compléter les fonctions permettant de vérifier la validité d'une matrice, de l'allouer dynamiquement et de la détruire correctement. Cet exercice permet notamment de comprendre la gestion de la mémoire dynamique en langage C, l'utilisation des pointeurs et la gestion des erreurs d'allocation. Il faut également garantir que les matrices restent dans un état sûr lorsqu'une opération échoue, afin d'éviter les fuites mémoire et les erreurs liées à l'utilisation de pointeurs invalides.
 
@@ -481,7 +682,7 @@ valgrind --leak-check=full ./test_ex1
 ```
 ![valgrind test_ex1](captures_valgrind/test_ex1.png)
 
-### test_ex2
+ ### test_ex2
 
 ```text
 ==4054== HEAP SUMMARY:
@@ -497,8 +698,24 @@ valgrind --leak-check=full ./test_ex1
 
 
 
- ## 6. Démonstration finale
+## 6. Démonstration finale
 
 
 
- ## 7. Bilan et difficultés
+## 7. Bilan et difficultés
+### 7.1. Bilan et difficultés rencontrées
+Ce travail pratique nous a permis de mieux comprendre la gestion de la mémoire dynamique en langage C, notamment l'utilisation des pointeurs, des structures et des fonctions d'allocation et de libération de mémoire. Nous avons également appris à organiser un programme en plusieurs modules, à utiliser un Makefile et à travailler à plusieurs avec GitHub.
+
+L'une des principales difficultés rencontrées a été la coordination du travail à distance. Comme nous intervenions sur des fichiers appartenant au même projet, il était important de savoir précisément qui modifiait quel fichier afin d'éviter les conflits lors des synchronisations. Nous avons donc pris l'habitude de nous informer mutuellement avant de modifier un fichier et d'utiliser `git pull` pour récupérer les dernières modifications avant de continuer notre travail.
+
+Une autre difficulté concernait la compilation et le débogage. Par exemple, nous avons rencontré des problèmes liés à la configuration des outils de compilation et à l'utilisation de commandes qui n'étaient pas disponibles dans notre environnement. Nous avons dû rechercher des solutions, adapter les commandes et vérifier progressivement les résultats obtenus. Les tests fournis nous ont permis de détecter les erreurs et de vérifier les corrections apportées.
+
+### 7.2. Répartition du travail
+Le travail a été réparti entre les deux membres du binôme. Nous avons réalisé l'exercice 1 ensemble afin de nous familiariser avec le sujet et l'organisation du projet. Salma a ensuite pris en charge l'exercice 2 ainsi que la rédaction de sa partie du compte rendu. Maissane a réalisé l'exercice 3 et a pris en charge la rédaction des parties communes du README. Salma a réalisé l'exercice 4 et rédigé la partie correspondante.
+
+### 7.3. Aides extérieures et ressources utilisées
+Nous avons utilisé le sujet du TD, les commentaires présents dans les fichiers sources et les résultats des tests pour guider notre travail, et des sites explicatifs.
+
+Nous avons également utilisé ChatGPT comme outil d'assistance pendant le projet. Il nous a aidées à comprendre certaines parties du code, notamment les pointeurs, les allocations dynamiques et les opérations sur les matrices. Nous l'avons aussi utilisé pour obtenir des explications sur les commandes de compilation, la création et l'organisation du Makefile, le débogage ainsi que la configuration et l'utilisation de certains outils qui n'étaient pas installés ou disponibles dans notre environnement.
+
+Enfin, ChatGPT nous a accompagnées dans l'organisation et la rédaction du compte rendu. Les explications et propositions obtenues ont été étudiées, adaptées au sujet et vérifiées à partir du code et des résultats des tests.
