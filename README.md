@@ -3,7 +3,7 @@
 **Établissement :** INSA Centre-Val de Loire  
 **Formation :** 3A Sciences et Technologies Informatiques (STI)  
 **Matière :** Programmation en langage C  
-**Travail réalisé par :** Maissane et Salma  
+    **Travail réalisé par :** Maissane Amraoui Salma Ben Lakhal  
 **Année universitaire :** 2026-2027
 
 **Dépôt GitHub :** TD-Stockage-de-matrices-en-C
@@ -680,6 +680,7 @@ valgrind --leak-check=full ./test_ex1
 ==2498== For lists of detected and suppressed errors, rerun with: -s
 ==2498== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 ```
+Toute la mémoire allouée par `mat_allouer` est libérée par `mat_detruire` , y compris lors des échecs d'allocation simulés.
 ![valgrind test_ex1](captures_valgrind/test_ex1.png)
 
  ### test_ex2
@@ -694,11 +695,95 @@ valgrind --leak-check=full ./test_ex1
 ==4054== For lists of detected and suppressed errors, rerun with: -s
 ==4054== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 ```
+Aucune fuite, y compris pour les fichiers incorrects, où `mat_lire` libère sa matrice locale avant de renvoyer l'erreur.
 ![valgrind test_ex2](captures_valgrind/test_ex2.png)
 
+### 5.3. test_ex3
+
+```bash
+valgrind --leak-check=full ./test_ex3
+```
+
+```text
+==732== HEAP SUMMARY:
+==732==     in use at exit: 0 bytes in 0 blocks
+==732==   total heap usage: 37 allocs, 37 frees, 1,412 bytes allocated
+==732==
+==732== All heap blocks were freed -- no leaks are possible
+==732==
+==732== For lists of detected and suppressed errors, rerun with: -s
+==732== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+[valgrind test_ex3](captures_valgrind/test_ex3.png)
+Aucune fuite, y compris dans les cas d'erreur 
+
+### 5.4. demo_matrices — cas réussi
+
+```bash
+valgrind --leak-check=full ./demo_matrices add donnees/A.txt donnees/B.txt R.txt
+```
+
+```==855== 
+==855== 
+==855== HEAP SUMMARY:
+==855==     in use at exit: 0 bytes in 0 blocks
+==855==   total heap usage: 22 allocs, 22 frees, 14,968 bytes allocated
+==855== 
+==855== All heap blocks were freed -- no leaks are possible
+==855== 
+==855== For lists of detected and suppressed errors, rerun with: -s
+==855== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+[valgrind_demo_reussi](captures_valgrind/valgrind_demo_reussi.png)
+
+Le programme s'exécute normalement et toute la mémoire est libérée : les matrices A, B et R sont détruites lors du nettoyage final.
+
+### 5.5. demo_matrices — scénario d'erreur
+
+```bash
+valgrind --leak-check=full ./demo_matrices add donnees/A.txt donnees/B.txt dossier_inexistant/R.txt
+```
+
+```### 5.5. demo_matrices — scénario d'erreur
+
+```bash
+valgrind --leak-check=full ./demo_matrices add donnees/A.txt donnees/B.txt dossier_inexistant/R.txt
+```
+
+```text
+Erreur : impossible de créer "dossier_inexistant/R.txt" : No such file or directory
+==929==
+==929== HEAP SUMMARY:
+==929==     in use at exit: 0 bytes in 0 blocks
+==929==   total heap usage: 23 allocs, 23 frees, 10,894 bytes allocated
+==929==
+==929== All heap blocks were freed -- no leaks are possible
+==929==
+==929== For lists of detected and suppressed errors, rerun with: -s
+==929== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+
+L'enregistrement échoue car le dossier n'existe pas, mais les trois matrices déjà créées (A, B et R) sont tout de même libérées grâce au point de nettoyage unique. Le programme se termine avec le code 1.
+
+[valgrind_demo_erreur](captures_valgrind/valgrind_demo_erreur.png)
+
+L'enregistrement échoue car le dossier n'existe pas, mais les trois matrices déjà créées (A, B et R) sont tout de même libérées grâce au point de nettoyage unique.
 
 
 ## 6. Démonstration finale
+### Scénario 1 — Addition réussie
+[scénario1](captures_valgrind/scénario1.png)
+Le comportement est celui attendu : les matrices A, B et R = A + B sont affichées, le résultat est enregistré dans `R.txt` et le programme se termine avec le code 0. Le fichier produit a aussi été relu par le programme lui-même 
+
+### Scénario 4 — Multiplication impossible (dimensions incompatibles)
+[scénario4](captures_valgrind/scénario4.png)
+
+Le comportement est celui attendu : le produit d'une matrice 4 × 3 par une matrice 4 × 3 n'est pas défini. Le programme affiche un message précis avec la cause et les dimensions, ne crée pas de fichier `R.txt`
+
+### Scénario 6 — Fichier mal formé
+[scénario6](captures_valgrind/scénario6.png)
+
+Le comportement est celui attendu : le programme signale que le fichier est mal formé
 
 
 
