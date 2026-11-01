@@ -42,23 +42,21 @@ Les tests sont exécutés progressivement afin de vérifier le bon fonctionnemen
 
 ## 4. Réalisation, exercice par exercice
 
-### 4.1. Exercice 1 — Allocation et destruction des matrices
+## 4.1. Exercice 1 — Allocation et destruction des matrices
 
-#### Objectif de l'exercice
+### Objectif de l'exercice
+  L'objectif de cet exercice est de compléter les fonctions permettant de vérifier la validité d'une matrice, de l'allouer dynamiquement et de la détruire correctement. Cet exercice permet notamment de comprendre la gestion de la mémoire dynamique en langage C, l'utilisation des pointeurs et la gestion des erreurs d'allocation. Il faut également garantir que les matrices restent dans un état sûr lorsqu'une opération échoue, afin d'éviter les fuites mémoire et les erreurs liées à l'utilisation de pointeurs invalides.
 
-L'objectif de cet exercice est de compléter les fonctions permettant de vérifier la validité d'une matrice, de l'allouer dynamiquement et de la détruire correctement.
-
-#### 4.1.1. Code ajouté — Fichier `matrice.c`
-
+### 4.1.1. Code ajouté — Fichier `matrice.c`
 **Étape 1.a — Ajout des messages d'erreur**
-
 ```c
 case MAT_ERR_DIMENSIONS:  return "dimensions incompatibles";
 case MAT_ERR_DEPASSEMENT: return "dépassement de capacité";
 ```
 
-**Étape 1.b — Vérification de la validité d'une matrice**
+Ces deux instructions permettent d'associer un message explicite à deux types d'erreurs pouvant être rencontrées lors des opérations sur les matrices. `MAT_ERR_DIMENSIONS` indique que les dimensions des matrices ne permettent pas d'effectuer l'opération demandée. `MAT_ERR_DEPASSEMENT` signale qu'un résultat dépasse la capacité de représentation du type entier utilisé. Ces messages facilitent la compréhension des erreurs lors de l'exécution et permettent d'obtenir des informations plus précises au lieu d'afficher uniquement un code numérique.
 
+**Étape 1.b — Vérification de la validité d'une matrice**
 ```c
 return m != NULL
     && m->coef != NULL
@@ -66,10 +64,10 @@ return m != NULL
     && m->nb_colonnes >= 1 && m->nb_colonnes <= MAT_DIM_MAX;
 ```
 
-#### 4.1.2. Code ajouté — Fichier `matrice_alloc.c`
+Cette condition permet de vérifier qu'une matrice respecte les règles de validité définies dans le programme. Tout d'abord, `m != NULL` vérifie que le pointeur vers la structure existe. Ensuite, `m->coef != NULL` garantit que le tableau contenant les coefficients a bien été alloué. Les deux dernières conditions vérifient que le nombre de lignes et de colonnes est compris entre 1 et `MAT_DIM_MAX`. L'utilisation de l'opérateur `&&` impose que toutes les conditions soient vraies pour considérer la matrice comme valide. Cela évite notamment de manipuler une matrice vide ou dont les dimensions sont incorrectes.
 
+### 4.1.2. Code ajouté — Fichier `matrice_alloc.c`
 **Étape 1.c — Vérification des dimensions**
-
 ```c
 if (nb_lignes < 1 || nb_lignes > MAT_DIM_MAX ||
     nb_colonnes < 1 || nb_colonnes > MAT_DIM_MAX) {
@@ -77,67 +75,67 @@ if (nb_lignes < 1 || nb_lignes > MAT_DIM_MAX ||
 }
 ```
 
-**Étape 1.d — Allocation des lignes**
+Cette vérification est effectuée avant toute allocation mémoire afin de s'assurer que les dimensions demandées sont autorisées. Une matrice doit posséder au moins une ligne et une colonne, et ses dimensions ne doivent pas dépasser la limite définie par `MAT_DIM_MAX`. L'opérateur `||` permet de détecter si au moins une des quatre conditions est vérifiée. Si les dimensions sont incorrectes, la fonction renvoie `MAT_ERR_ARGUMENT` sans effectuer d'allocation. Cette vérification évite donc de réserver inutilement de la mémoire pour une matrice qui ne respecte pas les contraintes du programme.
 
+**Étape 1.d — Allocation des lignes**
 ```c
 for (int i = 0; i < nb_lignes; i++) {
     coef[i] = mat_calloc((size_t)nb_colonnes, sizeof *coef[i]);
+
     if (coef[i] == NULL) {
         for (int k = i - 1; k >= 0; k--) {
             free(coef[k]);
         }
+
         free(coef);
         return MAT_ERR_ALLOCATION;
     }
 }
 ```
 
-**Étape 1.e — Initialisation de la matrice**
+Cette boucle permet d'allouer séparément chaque ligne de la matrice. La fonction `mat_calloc` réserve la mémoire nécessaire pour stocker `nb_colonnes` entiers et initialise les zones allouées à zéro. Le résultat de chaque allocation est enregistré dans `coef[i]`. Si une allocation échoue, le pointeur obtenu vaut `NULL` : il faut alors libérer toutes les lignes précédemment allouées, puis libérer le tableau de pointeurs `coef`. La fonction renvoie ensuite `MAT_ERR_ALLOCATION`. Cette gestion des erreurs est essentielle pour éviter les fuites mémoire lorsqu'une allocation échoue au milieu de la création de la matrice.
 
+**Étape 1.e — Initialisation de la matrice**
 ```c
 res->coef = coef;
 res->nb_lignes = nb_lignes;
 res->nb_colonnes = nb_colonnes;
+
 return MAT_OK;
 ```
 
-**Étape 1.f — Libération de la mémoire**
+Une fois toutes les allocations réussies, les informations de la matrice sont enregistrées dans la structure pointée par `res`. Le champ `coef` reçoit l'adresse du tableau de pointeurs contenant les différentes lignes. Les champs `nb_lignes` et `nb_colonnes` permettent ensuite de connaître les dimensions de la matrice. Cette initialisation n'est effectuée qu'après la réussite de toutes les allocations, ce qui évite de présenter comme valide une matrice qui n'aurait été que partiellement construite. Enfin, `MAT_OK` indique que l'allocation s'est terminée correctement.
 
+**Étape 1.f — Libération de la mémoire**
 ```c
 if (m->coef != NULL) {
     for (int i = 0; i < m->nb_lignes; i++) {
         free(m->coef[i]);
     }
+
     free(m->coef);
 }
 ```
 
-#### 4.1.3. Questions de réflexion
+Cette partie permet de libérer correctement toute la mémoire utilisée par une matrice. Il faut commencer par parcourir les lignes et libérer chacune d'elles avec `free(m->coef[i])`. Ensuite, le tableau principal contenant les pointeurs vers ces lignes est libéré avec `free(m->coef)`. Il est important de respecter cet ordre, car libérer le tableau principal avant les lignes ferait perdre les adresses nécessaires pour les libérer. La vérification `m->coef != NULL` évite également de tenter de libérer un tableau qui n'existe pas. Après cette opération, la fonction fournie remet la structure dans l'état `MATRICE_VIDE`, ce qui permet notamment de sécuriser un nouvel appel à `mat_detruire`.
 
+### 4.1.3. Questions de réflexion
 - **Q3.1 — Pourquoi `mat_detruire` prend-elle un pointeur vers la matrice ?**
-
-  La fonction prend un pointeur pour pouvoir modifier directement la matrice d'origine. Elle libère la mémoire et remet la structure dans un état vide. Avec un passage par valeur, seule une copie locale serait modifiée.
+ La fonction `mat_detruire` prend un pointeur vers la matrice afin de pouvoir modifier directement la structure d'origine. En effet, elle ne se contente pas de libérer la mémoire occupée par les coefficients : elle doit également remettre la structure dans un état vide avec `*m = MATRICE_VIDE`. Si la matrice était passée par valeur, seule une copie locale de la structure serait modifiée, tandis que la structure d'origine conserverait ses anciens pointeurs. Cela pourrait entraîner l'utilisation de pointeurs invalides après la libération de la mémoire. Le passage par adresse permet donc de libérer les ressources et de mettre à jour la matrice réellement utilisée par le programme.
 
 - **Q3.2 — Combien d'appels à `calloc` et à `free` sont nécessaires pour une matrice de n lignes et p colonnes ?**
-
-  Il faut `n + 1` appels à `calloc` : un pour le tableau de pointeurs et un pour chaque ligne. Pour détruire une matrice entièrement allouée, il faut également `n + 1` appels à `free`.
-
-  Si une allocation échoue, il faut libérer toutes les allocations déjà réalisées.
+ Pour une matrice de n lignes et p colonnes, il faut effectuer n + 1 allocations : un premier appel pour réserver le tableau de n pointeurs, puis n appels supplémentaires pour allouer individuellement les lignes contenant chacune p entiers. La destruction d'une matrice entièrement allouée nécessite également n + 1 appels à `free` : un pour chaque ligne et un pour le tableau principal. Le nombre de colonnes p influence la quantité de mémoire réservée pour chaque ligne, mais pas le nombre d'allocations. Si une allocation échoue pendant la création, seules les allocations déjà réussies doivent être libérées. Cette gestion garantit qu'aucune zone mémoire ne reste inutilisée sans possibilité de la libérer.
 
 - **Q3.3 — Pourquoi peut-on appeler deux fois `mat_detruire` sur la même matrice, mais pas sur une copie superficielle ?**
-
-  Après le premier appel, la matrice est remise à l'état vide. Le deuxième appel ne provoque donc pas de double libération. En revanche, une copie superficielle partage les mêmes pointeurs. Détruire les deux matrices peut provoquer une double libération de mémoire.
+ Après un premier appel à `mat_detruire`, la fonction libère les lignes, puis le tableau de pointeurs, et remet la structure à l'état `MATRICE_VIDE`. Lors d'un deuxième appel sur cette même structure, le champ `coef` vaut `NULL` : aucune nouvelle libération n'est donc effectuée. En revanche, une copie superficielle d'une matrice ne copie pas les données elles-mêmes, mais uniquement les valeurs des champs de la structure, notamment les adresses des pointeurs. Les deux structures partagent alors les mêmes zones mémoire. Si chacune est détruite, le même espace mémoire risque d'être libéré deux fois, ce qui provoque une double libération et un comportement indéfini. Il faut donc respecter une seule responsabilité de libération pour chaque allocation.
 
 - **Q3.4 — Pourquoi initialiser `*res` avec `MATRICE_VIDE` avant de commencer l'allocation ?**
+ L'instruction `*res = MATRICE_VIDE` permet de placer immédiatement la matrice résultat dans un état connu et sûr avant de commencer les allocations. Ainsi, si les dimensions sont invalides ou si une allocation échoue, la structure ne contient pas d'anciennes adresses ou de pointeurs non initialisés. Cette initialisation facilite également la gestion des erreurs, car l'appelant sait que le résultat reste vide lorsque la fonction échoue. Dans notre implémentation, les lignes ne sont enregistrées dans `res` qu'après la réussite de toutes les allocations. Les allocations partielles sont directement libérées avant le retour de la fonction. Cette organisation garantit donc une gestion cohérente de la mémoire et évite de laisser une matrice dans un état partiellement construit.
 
-  L'instruction `*res = MATRICE_VIDE;` permet d'initialiser la matrice résultat dans un état sûr. Ainsi, si les dimensions sont invalides ou si une allocation échoue, la matrice ne contient pas de pointeurs non initialisés.
-
-#### 4.1.4. Tests et validation
-
-Les tests de l'exercice 1 ont été exécutés afin de vérifier le bon fonctionnement des fonctions complétées.
+### 4.1.4. Tests et validation
+Les tests de l'exercice 1 ont été exécutés afin de vérifier le bon fonctionnement des fonctions complétées. Ils permettent notamment de contrôler la validité des matrices, le respect des dimensions autorisées, le bon déroulement des allocations et la libération correcte de la mémoire. 
 
 **Résultat obtenu :**
-
 ```text
 Bilan : 16 / 16
 ```
@@ -152,6 +150,7 @@ valgrind --leak-check=full ./test_ex1
 
 **Résultat obtenu :**
 (voir 5. Vérification mémoire)
+
 
 ### 4.2. Exercice 2 — Entrées-sorties
 #### Objectif de l'exercice
@@ -260,10 +259,9 @@ valgrind --leak-check=full ./test_ex2
 **Résultat obtenu :**
 (voir 5. Vérification mémoire)
 
+
 ## 4.3. Exercice 3 — Addition et multiplication de matrices
-
 ### 4.3.1. Objectif de l'exercice
-
 L'objectif de cet exercice est de compléter le fichier `matrice_calcul.c` afin de permettre l'addition et la multiplication de deux matrices. Ces opérations nécessitent de vérifier la compatibilité des dimensions avant d'effectuer les calculs. Il faut également garantir que les matrices d'entrée ne sont jamais modifiées et que le résultat possède sa propre allocation mémoire. Enfin, les calculs doivent être réalisés en évitant les dépassements de capacité des entiers et en assurant une gestion correcte de la mémoire en cas d'erreur.
 
 ### 4.3.2. Code ajouté — Fichier `matrice_calcul.c`
@@ -400,9 +398,7 @@ Bilan : 14 / 14 verifications reussies.
 
 
 ### 4.4. Exercice 4 — Démonstration complète
-
 #### Objectif de l'exercice
-
 L'objectif de cet exercice est d'assembler les quatre modules dans un programme de démonstration qui lit deux matrices depuis des fichiers, calcule leur somme ou leur produit, affiche et enregistre le résultat, et traite proprement chaque erreur en libérant toute la mémoire.
 
 #### 4.4.1. Code ajouté — Fichier `main.c`
