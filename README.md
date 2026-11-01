@@ -260,6 +260,145 @@ valgrind --leak-check=full ./test_ex2
 **Résultat obtenu :**
 (voir 5. Vérification mémoire)
 
+## 4.3. Exercice 3 — Addition et multiplication de matrices
+
+### 4.3.1. Objectif de l'exercice
+
+L'objectif de cet exercice est de compléter le fichier `matrice_calcul.c` afin de permettre l'addition et la multiplication de deux matrices. Ces opérations nécessitent de vérifier la compatibilité des dimensions avant d'effectuer les calculs. Il faut également garantir que les matrices d'entrée ne sont jamais modifiées et que le résultat possède sa propre allocation mémoire. Enfin, les calculs doivent être réalisés en évitant les dépassements de capacité des entiers et en assurant une gestion correcte de la mémoire en cas d'erreur.
+
+### 4.3.2. Code ajouté — Fichier `matrice_calcul.c`
+
+**Étape 3.a — Vérification des dimensions pour l'addition**
+
+Avant d'effectuer l'addition, il faut vérifier que les deux matrices possèdent le même nombre de lignes et de colonnes. Si l'une de ces conditions n'est pas respectée, la fonction renvoie `MAT_ERR_DIMENSIONS`.
+
+```c
+if (a->nb_lignes != b->nb_lignes ||
+    a->nb_colonnes != b->nb_colonnes) {
+    return MAT_ERR_DIMENSIONS;
+}
+```
+
+**Étape 3.b — Allocation de la matrice résultat**
+
+Une nouvelle matrice `r` est créée avec les mêmes dimensions que la matrice `a`. La fonction `mat_allouer` réserve dynamiquement la mémoire nécessaire. Si l'allocation échoue, l'erreur est immédiatement renvoyée.
+
+```c
+Matrice r = MATRICE_VIDE;
+err = mat_allouer(&r, a->nb_lignes, a->nb_colonnes);
+if (err != MAT_OK)
+    return err;
+```
+
+**Étape 3.c — Calcul de la somme des coefficients**
+
+Chaque coefficient du résultat est obtenu en additionnant les coefficients correspondants des deux matrices. Le type `long long` est utilisé pour effectuer le calcul dans un type plus grand avant de vérifier que le résultat peut être stocké dans un `int`.
+
+```c
+long long s = (long long)a->coef[i][j] + b->coef[i][j];
+```
+
+**Étape 3.d — Transfert du résultat**
+
+Une fois tous les coefficients calculés et vérifiés, la structure `r` est transférée dans `res`. Le résultat conserve ainsi la mémoire qui vient d'être allouée. Il ne faut pas détruire `r` après ce transfert, car cette mémoire appartient désormais à `res`.
+
+```c
+*res = r;
+return MAT_OK;
+```
+
+**Étape 3.e — Vérification des dimensions pour la multiplication**
+
+Pour multiplier deux matrices, le nombre de colonnes de la première matrice doit être égal au nombre de lignes de la deuxième. Si cette condition n'est pas respectée, le produit matriciel n'est pas défini et la fonction renvoie `MAT_ERR_DIMENSIONS`.
+
+```c
+if (a->nb_colonnes != b->nb_lignes)
+    return MAT_ERR_DIMENSIONS;
+```
+
+**Étape 3.f — Allocation de la matrice résultat**
+
+La matrice résultat doit posséder le nombre de lignes de `a` et le nombre de colonnes de `b`. La mémoire est réservée avec `mat_allouer`. En cas d'échec, la fonction renvoie directement l'erreur, sans laisser de mémoire partiellement allouée.
+
+```c
+Matrice r = MATRICE_VIDE;
+err = mat_allouer(&r, a->nb_lignes, b->nb_colonnes);
+if (err != MAT_OK)
+    return err;
+```
+
+**Étape 3.g — Calcul du produit des matrices et détection des dépassements**
+
+Pour calculer chaque coefficient du résultat, on multiplie les coefficients de la ligne `i` de la première matrice par ceux de la colonne `j` de la deuxième matrice, puis on additionne les produits obtenus. Le calcul intermédiaire est réalisé en `long long`. Avant chaque addition, une vérification permet de détecter un éventuel dépassement de capacité de ce type. En cas d'erreur, la matrice résultat est détruite afin d'éviter une fuite mémoire.
+
+```c
+for (int k = 0; k < a->nb_colonnes; k++) {
+    long long p = (long long)a->coef[i][k] * b->coef[k][j];
+
+    if ((p > 0 && s > LLONG_MAX - p)
+        || (p < 0 && s < LLONG_MIN - p)) {
+        mat_detruire(&r);
+        return MAT_ERR_DEPASSEMENT;
+    }
+
+    s += p;
+}
+```
+
+**Étape 3.h — Transfert du résultat**
+
+Après le calcul de tous les coefficients et les vérifications nécessaires, la matrice obtenue est transférée vers `res`. La fonction renvoie `MAT_OK` pour indiquer que l'opération s'est terminée correctement.
+
+```c
+*res = r;
+return MAT_OK;
+```
+
+### 4.3.3. Questions de réflexion
+
+- **Q5.1 — Le paramètre `const Matrice *a` empêche-t-il d'écrire `a->coef[0][0] = 7;` ? Que protège exactement ce `const` ? Que faudrait-il changer pour que le compilateur refuse cette affectation ?**
+ Non, le paramètre `const Matrice *a` ne suffit pas à empêcher la modification des coefficients. Le mot-clé `const` protège les champs de la structure accessibles à travers le pointeur `a`, mais il ne rend pas automatiquement constantes les données pointées par `coef`. Comme `coef` est un pointeur vers des pointeurs d'entiers, l'expression `a->coef[0][0]` reste modifiable avec la représentation actuelle. Pour interdire cette modification au compilateur, il faudrait également utiliser une représentation en lecture seule des coefficients, par exemple avec des pointeurs vers des entiers constants (`const int`). Une autre solution consiste à utiliser un type distinct représentant une vue constante de la matrice. Cela permettrait de séparer clairement les fonctions qui peuvent modifier les coefficients de celles qui doivent uniquement les consulter.
+
+- **Q5.2 — Pourquoi refuse-t-on l'appel `mat_additionner(&a, &b, &a)` alors que mathématiquement l'opération `a ← a + b` a un sens ? Que se passerait-il avec notre implémentation si on l'acceptait ?**
+ Mathématiquement, il est tout à fait possible de remplacer une matrice par la somme de cette matrice et d'une autre. Cependant, notre implémentation ne permet pas cette opération car le paramètre `res` doit être différent des deux matrices d'entrée. Cette règle est vérifiée par la fonction fournie `verifier_parametres`, qui renvoie `MAT_ERR_ARGUMENT` si `res == a` ou `res == b`. En effet, cette fonction initialise d'abord le résultat avec `*res = MATRICE_VIDE`. Si `res` désignait directement `a`, cette instruction écraserait les informations de la matrice d'entrée, notamment son pointeur vers la mémoire allouée. Les données seraient alors perdues et une fuite mémoire pourrait se produire. Le refus de cet appel garantit donc la protection des matrices d'entrée et le respect des règles de propriété de la mémoire définies dans le module.
+
+- **Q5.3 — Combien de multiplications d'entiers effectue `mat_multiplier` pour des matrices de dimensions n × p et p × q ? Combien pour deux matrices 1000 × 1000 ?**
+ Pour multiplier une matrice de dimensions n × p par une matrice de dimensions p × q, le résultat possède n lignes et q colonnes. Chaque coefficient du résultat est calculé à partir de p multiplications, correspondant aux produits des coefficients d'une ligne de la première matrice avec ceux d'une colonne de la deuxième. Comme le résultat contient n × q coefficients, le nombre total de multiplications est donc n × p × q. Pour deux matrices carrées de dimensions 1000 × 1000, chaque coefficient nécessite 1000 multiplications et le résultat contient 1 000 000 de coefficients. Le nombre total est donc de 1000 × 1000 × 1000, soit **1 000 000 000 de multiplications**. Cette complexité montre que le nombre d'opérations augmente rapidement avec la taille des matrices.
+
+- **Q5.4 — Pourquoi ne suffit-il pas de calculer `int s = a + b;` puis de tester `s < a` pour détecter un dépassement ?**
+ Cette méthode n'est pas fiable car le dépassement d'un entier signé en C entraîne un comportement indéfini. Cela signifie que le programme ne garantit pas le résultat de l'addition lorsque la valeur obtenue dépasse les limites du type `int`. La vérification effectuée après le calcul arrive donc trop tard : le dépassement a déjà pu se produire. De plus, le test `s < a` ne permet pas de détecter correctement tous les cas de dépassement, notamment lorsque les opérandes peuvent être négatifs. Dans notre implémentation, nous utilisons donc le type `long long` pour effectuer les calculs intermédiaires. Nous vérifions ensuite que le résultat appartient à l'intervalle `[INT_MIN, INT_MAX]` avec la fonction fournie `tient_dans_int`. Si cette condition n'est pas respectée, la fonction renvoie `MAT_ERR_DEPASSEMENT` et libère la mémoire du résultat avant de quitter.
+
+### 4.3.4. Tests et validation
+ Les tests de l'exercice 3 ont été exécutés afin de vérifier le bon fonctionnement des fonctions complétées. Ils permettent de contrôler les dimensions des matrices, l'exactitude des calculs, la détection des dépassements de capacité, la conservation des matrices d'entrée et la gestion des erreurs d'allocation.
+
+**Résultat obtenu :**
+
+```text
+=== Exercice 3 : addition ===
+[OK] (3.a) (2 x 3) + (3 x 2) : MAT_ERR_DIMENSIONS
+[OK] (3.d) (2 x 3) + (2 x 3) : MAT_OK
+[OK] (3.c) a + b est correct
+[OK] a et b n’ont pas ete modifiees
+[OK] (3.b) le resultat possede sa propre memoire
+[OK] (3.c) INT_MAX + 1 : MAT_ERR_DEPASSEMENT
+=== Exercice 3 : multiplication ===
+[OK] (3.e) (2 x 3) x (2 x 3) : MAT_ERR_DIMENSIONS
+[OK] (3.h) (2 x 3) x (3 x 2) : MAT_OK
+[OK] (3.g) a x c = (58 64 / 139 154)
+[OK] (3.f) (3 x 2) x (2 x 3) donne une matrice 3 x 3
+[OK] a et c n’ont pas ete modifiees
+[OK] (3.g) 2 x 10^10 depasse INT_MAX : MAT_ERR_DEPASSEMENT
+=== Exercice 3 : cas particuliers ===
+[OK] resultat = entree refuse, a reste intacte
+[OK] (3.f) echec d’allocation : MAT_ERR_ALLOCATION, r vide
+
+Bilan : 14 / 14 verifications reussies.
+```
+
+### 4.3.5. Vérification de la mémoire avec Valgrind
+
+
+
 ### 4.4. Exercice 4 — Démonstration complète
 
 #### Objectif de l'exercice
