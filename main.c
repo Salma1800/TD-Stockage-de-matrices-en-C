@@ -77,9 +77,21 @@ int main(int argc, char *argv[])
     if (charger(argv[2], &a) != MAT_OK || charger(argv[3], &b) != MAT_OK)
         goto nettoyage;
 
+    
+    mat_afficher("A", &a);
+    mat_afficher("B", &b);
     /* (4.a) À COMPLÉTER : afficher A et B avec mat_afficher.          */
 
 
+    MatErreur err = addition ? mat_additionner(&a, &b, &r)
+                             : mat_multiplier(&a, &b, &r);
+    if (err != MAT_OK) {
+        fprintf(stderr, "Erreur : calcul impossible : %s ",
+                mat_message_erreur(err));
+        fprintf(stderr, "(A : %d x %d, B : %d x %d)\n",
+                a.nb_lignes, a.nb_colonnes, b.nb_lignes, b.nb_colonnes);
+        goto nettoyage;
+    }
     /* (4.b) À COMPLÉTER : calculer r.
      *         MatErreur err = addition ? mat_additionner(&a, &b, &r)
      *                                  : mat_multiplier(&a, &b, &r);
@@ -87,8 +99,8 @@ int main(int argc, char *argv[])
      *       mat_message_erreur(err) et les dimensions de A et de B,
      *       puis : goto nettoyage;                                    */
 
-    (void)addition;   /* ligne provisoire : à supprimer en (4.b) */
-
+    
+    mat_afficher(addition ? "R = A + B" : "R = A x B", &r);
     /* (4.c) À COMPLÉTER : afficher r (nom "R = A + B" ou "R = A x B").  */
 
 
@@ -96,6 +108,8 @@ int main(int argc, char *argv[])
     if (sauvegarder(argv[4], &r) != MAT_OK)
         goto nettoyage;
 
+    printf("Résultat enregistré dans \"%s\".\n", argv[4]);
+    statut = EXIT_SUCCESS;
     /* (4.d) À COMPLÉTER : tout a réussi :
      *         - afficher "Résultat enregistré dans \"...\"." ;
      *         - statut = EXIT_SUCCESS;                                 */
